@@ -1,0 +1,16 @@
+.venv
+secrets
+attachments
+__pycache__
+database.json
+.terraform
+*.tar
+*.tar.gz
+data
+.aider*
+bin/act
+.vscode
+.DS_Store
+research
+.coverage
+.env

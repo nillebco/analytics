@@ -1,0 +1,19 @@
+{
+  "template": "https://github.com/nillebco/service-template/",
+  "commit": "2f811dc273f07d9441164af70f3927a0ba81fa14",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "full_name": "Ivo Bellin Salarin",
+      "email": "ivo@nilleb.com",
+      "project_name": "analytics",
+      "description": "GDPR compliant analytics, lightweight and self-hostable",
+      "version": "0.1.0",
+      "_copy_without_render": [
+        "workflows/pre-commit.yml"
+      ],
+      "_template": "https://github.com/nillebco/service-template/"
+    }
+  },
+  "directory": null
+}

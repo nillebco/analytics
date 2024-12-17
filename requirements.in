@@ -1,0 +1,10 @@
+httpx
+pyyaml
+fastapi
+uvicorn[standard]
+sqlmodel
+asyncpg
+sqlalchemy
+jinja2
+python-dotenv
+pyjwt

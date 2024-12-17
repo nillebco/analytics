@@ -1,0 +1,35 @@
+name: pre-commit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: FedericoCarboni/setup-ffmpeg@v3
+      id: setup-ffmpeg
+      with:
+        ffmpeg-version: release
+        architecture: ''
+        linking-type: static
+    - uses: actions/setup-python@v3
+
+    - name: Cache Python packages
+      uses: actions/cache@v2
+      with:
+        path: .venv
+        key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.in', '**/requirements.txt', '**/dev-requirements.in', '**/dev-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-venv-${{ hashFiles('**/requirements.in', '**/requirements.txt', '**/dev-requirements.in', '**/dev-requirements.txt') }}
+
+    - name: Install dependencies
+      run: ./cli setup
+
+    - uses: pre-commit/action@v3.0.1
+
+    - name: Run tests
+      run: ./cli test

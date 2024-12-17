@@ -1,0 +1,16 @@
+black
+isort
+watchdog
+mypy
+vcrpy
+pytest
+pytest-vcr
+pytest-cov
+pre-commit
+ruff
+types-PyYAML
+pytest-asyncio
+aiosqlite
+bandit
+cruft
+greenlet

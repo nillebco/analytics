@@ -1,0 +1,150 @@
+#!/bin/bash
+
+installuv() {
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        brew install uv
+    else
+        echo "Unsupported operating system."
+    fi
+}
+
+load_dotenv() {
+    VERSION=$(python -m api.version)
+    APP_NAME=$(python -m api.app_name)
+    if [ -f .env ]; then
+        # export $(cat .env | xargs)
+        set -a; source .env; set +a
+    fi
+}
+
+id() {
+    . .venv/bin/activate
+    VERSION=$(python -m api.version)
+    APP_NAME=$(python -m api.app_name)
+    echo "$APP_NAME $VERSION"
+}
+
+setup() {
+    uv venv
+    source .venv/bin/activate
+    uv pip install -r dev-requirements.txt
+    pre-commit install
+}
+
+devcompile() {
+    uv pip compile requirements.in > requirements.txt
+    uv pip compile requirements.in dev-requirements.in > dev-requirements.txt
+}
+
+devsync() {
+    source .venv/bin/activate
+    uv pip sync requirements.txt
+    uv pip sync dev-requirements.txt
+}
+
+lint() {
+    source .venv/bin/activate
+    ruff check .
+    ruff format .
+    mypy .
+    bandit -r api
+}
+
+test() {
+    source .venv/bin/activate
+    python -m pytest -s --cov=api/ --cov=tests --cov-report=term-missing --cov-report html "${@:2}"
+}
+
+pre_commit() {
+    source .venv/bin/activate
+    pre-commit run --all-files
+}
+
+wrap() {
+    . .venv/bin/activate
+    "${@:2}"
+}
+
+serve() {
+    . .venv/bin/activate
+    IS_DEV=true uvicorn api.app:app --reload --log-level debug --port 17581
+}
+
+build_image() {
+    set -eux
+    . .venv/bin/activate
+    load_dotenv
+    docker build --build-arg PORT=8017 -t nillebco/$APP_NAME:$VERSION .
+    if [ -f $APP_NAME.tar.gz ]; then
+        rm $APP_NAME.tar.gz
+    fi
+    docker save nillebco/$APP_NAME:$VERSION > $APP_NAME.tar
+    gzip $APP_NAME.tar
+    sha256sum $APP_NAME.tar.gz
+}
+
+docker_run_deps() {
+    load_dotenv
+    docker volume create postgres-data
+    : "${POSTGRES_USER:=nillebco}"
+    docker network inspect "$APP_NAME-network" >/dev/null 2>&1 || docker network create $APP_NAME-network
+    docker run -d --rm --network $APP_NAME-network --name postgres-$APP_NAME -p 5432:5432 -v postgres-data:/var/lib/postgresql/data -e POSTGRES_USER="$POSTGRES_USER" -e POSTGRES_DB=$APP_NAME -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" "${@:2}" docker.io/pgvector/pgvector:pg16
+}
+
+docker_run() {
+    load_dotenv
+    docker volume create $APP_NAME-data
+    docker volume create $APP_NAME-secrets
+    : "${POSTGRES_USER:=nillebco}"
+    DATABASE_URL="postgresql+asyncpg://$POSTGRES_USER:${POSTGRES_PASSWORD}@postgres-$APP_NAME/$APP_NAME"
+    docker run --rm --network $APP_NAME-network --name $APP_NAME -v $APP_NAME-data:/app/data -v $APP_NAME-secrets:/app/secrets -e DATABASE_URL="${DATABASE_URL}" -e PORT=8017 -p 8018:8018 "${@:2}" nillebco/$APP_NAME:$VERSION
+}
+
+zapscan() {
+    mkdir data
+    docker run --rm -v $(pwd)/data:/zap/wrk:rw -t ghcr.io/zaproxy/zaproxy:stable zap-api-scan.py -t http://host.docker.internal:8017/openapi.json -f openapi -r api-scan.html
+}
+
+case "$1" in
+    installuv)
+        installuv
+        ;;
+    id)
+        id
+        ;;
+    setup)
+        setup
+        ;;
+    devcompile)
+        devcompile
+        ;;
+    devsync)
+        devsync
+        ;;
+    lint)
+        lint
+        ;;
+    test)
+        test $@
+        ;;
+    pre-commit)
+        pre_commit
+        ;;
+    wrap)
+        wrap $@
+        ;;
+    build-image)
+        build_image
+        ;;
+    zapscan)
+        zapscan
+        ;;
+    serve)
+        serve
+        ;;
+    *)
+        echo "Error: Invalid command. Available commands: setup | devcompile | devsync | serve"
+        ;;
+esac
