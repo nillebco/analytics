@@ -8,8 +8,17 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from jinja2 import Template, TemplateNotFound
 
-from .constants import ANALYTICS_API, API_PREFIX, APP_NAME, IS_DEV
-from .database.sql import create_tables
+from .common import generate_guid
+from .constants import (
+    ANALYTICS_API,
+    API_PREFIX,
+    APP_NAME,
+    IS_DEV,
+    OWNER_EMAIL,
+    OWNER_NAME,
+    PROPERTY_SLUG,
+)
+from .database.sql import get_or_create_property, get_or_create_user, recreate_tables
 from .logger import logger
 from .routers import analytics
 from .times import utc_now
@@ -22,7 +31,15 @@ NOT_AUTHORIZED = "Not Authorized"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await create_tables()
+    await recreate_tables()
+    user = await get_or_create_user(
+        generate_guid(OWNER_EMAIL),
+        OWNER_NAME,
+        OWNER_EMAIL,
+    )
+    await get_or_create_property(
+        generate_guid(OWNER_EMAIL + PROPERTY_SLUG), user.id, PROPERTY_SLUG
+    )
     yield
 
 
@@ -79,6 +96,7 @@ async def catch_all(
         "API_PREFIX": API_PREFIX,
         "ANALYTICS_API": ANALYTICS_API,
     }
+    logger.info(f"catch_all: {rest_of_path}, query_params: {request.query_params}")
     try:
         path = (
             f"{rest_of_path}index.html" if rest_of_path.endswith("/") else rest_of_path

@@ -9,7 +9,7 @@ anyio==4.7.0
     #   watchfiles
 asyncpg==0.30.0
     # via -r requirements.in
-certifi==2024.8.30
+certifi==2024.12.14
     # via
     #   httpcore
     #   httpx
@@ -68,11 +68,13 @@ typing-extensions==4.12.2
     #   pydantic
     #   pydantic-core
     #   sqlalchemy
-uvicorn==0.32.1
+uuid7==0.1.0
+    # via -r requirements.in
+uvicorn==0.34.0
     # via -r requirements.in
 uvloop==0.21.0
     # via uvicorn
-watchfiles==1.0.0
+watchfiles==1.0.3
     # via uvicorn
 websockets==14.1
     # via uvicorn

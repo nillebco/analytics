@@ -10,3 +10,7 @@ DATA_FOLDER: str = "data"
 API_PREFIX: str = "/api/v1"
 
 ANALYTICS_API: str = "/analytics"
+
+OWNER_NAME = "Ivo Bellin Salarin"
+OWNER_EMAIL = "ivo@nilleb.com"
+PROPERTY_SLUG = "default"

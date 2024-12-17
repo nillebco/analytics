@@ -19,7 +19,7 @@ binaryornot==0.4.4
     # via cookiecutter
 black==24.10.0
     # via -r dev-requirements.in
-certifi==2024.8.30
+certifi==2024.12.14
     # via
     #   httpcore
     #   httpx
@@ -131,7 +131,7 @@ pytest==8.3.4
     #   pytest-asyncio
     #   pytest-cov
     #   pytest-vcr
-pytest-asyncio==0.24.0
+pytest-asyncio==0.25.0
     # via -r dev-requirements.in
 pytest-cov==6.0.0
     # via -r dev-requirements.in
@@ -160,7 +160,7 @@ rich==13.9.4
     #   bandit
     #   cookiecutter
     #   typer
-ruff==0.8.2
+ruff==0.8.3
     # via -r dev-requirements.in
 shellingham==1.5.4
     # via typer
@@ -202,7 +202,9 @@ urllib3==2.2.3
     # via
     #   requests
     #   vcrpy
-uvicorn==0.32.1
+uuid7==0.1.0
+    # via -r requirements.in
+uvicorn==0.34.0
     # via -r requirements.in
 uvloop==0.21.0
     # via uvicorn
@@ -214,7 +216,7 @@ virtualenv==20.28.0
     # via pre-commit
 watchdog==6.0.0
     # via -r dev-requirements.in
-watchfiles==1.0.0
+watchfiles==1.0.3
     # via uvicorn
 websockets==14.1
     # via uvicorn

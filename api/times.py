@@ -1,8 +1,8 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 def utc_now():
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 def utc_now_float():

@@ -1,0 +1,8 @@
+-- execute these lines one at a time, being connected as the "main" user of the database
+create database "analytics";
+create user "analytics-user" with encrypted password 'samplepassword';
+grant all privileges on database "analytics" to "analytics-user";
+-- change database connection
+\c analytics
+GRANT ALL ON SCHEMA public TO "analytics-user";
+GRANT USAGE ON SCHEMA public TO "analytics-user";

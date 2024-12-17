@@ -10,14 +10,14 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, select
 from sqlmodel.sql.expression import _T, SelectOfScalar
 
 from ..constants import IS_TESTING
 from ..logger import logger
 from ..secrets import DATABASE_URL
 from ..times import utc_now
-from .types import AnalyticsEvent
+from .types import AnalyticsEvent, Property, User
 
 IN_MEMORY_DATABASE = "sqlite+aiosqlite://"
 connection_string = (
@@ -73,17 +73,21 @@ async def execute_statement(session: AsyncSession, stmt: SelectOfScalar[_T]):
 
 
 async def collect(
+    uid: str,
     event_type: str,
     page_url: Optional[str] = None,
     user_agent: Optional[str] = None,
     referrer: Optional[str] = None,
+    property_id: Optional[str] = None,
 ):
     async with session_scope() as session:
         event = AnalyticsEvent(
+            id=uid,
             event_type=event_type,
             page_url=page_url,
             referrer=referrer,
             user_agent=user_agent,
+            property_id=property_id,
         )
 
         session.add(event)
@@ -100,3 +104,58 @@ async def cleanup_old_data():
             {"cutoff_date": cutoff_date},
         )
         session.commit()
+
+
+async def _get_user_by_email(session: AsyncSession, user_email: str) -> Optional[User]:
+    user_stmt = select(User).where(User.email == user_email)
+    user = (await execute_statement(session, user_stmt)).scalars().first()
+    return user
+
+
+async def get_user_by_email(user_email: str) -> Optional[User]:
+    async with session_scope() as session:
+        return await _get_user_by_email(session, user_email)
+
+
+async def create_user(id: str, name: str, email: str) -> User:
+    async with session_scope() as session:
+        user = User(id=id, name=name, email=email)
+        session.add(user)
+        await session.commit()
+        return user
+
+
+async def get_or_create_user(id: str, name: str, email: str) -> User:
+    async with session_scope() as session:
+        user = await _get_user_by_email(session, email)
+        if user:
+            return user
+
+        user = User(id=id, name=name, email=email)
+        session.add(user)
+        await session.commit()
+        return user
+
+
+async def get_property_by_id(property_id: str):
+    async with session_scope() as session:
+        property = await execute_statement(
+            session, select(Property).where(Property.id == property_id)
+        )
+        return property.scalars().first()
+
+
+async def get_or_create_property(id: str, owner_id: str, property_slug: str):
+    async with session_scope() as session:
+        if id:
+            properties = await execute_statement(
+                session, select(Property).where(Property.id == id)
+            )
+            prop = properties.scalars().first()
+            if prop:
+                return prop
+
+        property = Property(id=id, owner_id=owner_id, slug=property_slug)
+        session.add(property)
+        await session.commit()
+        return property
