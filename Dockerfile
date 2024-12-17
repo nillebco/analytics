@@ -31,8 +31,6 @@ RUN cd /app && \
 FROM python:3.12-slim as runner
 RUN apt-get -y update && \
     apt-get install -y --no-install-recommends \
-    ffmpeg \
-    pandoc && \
     apt-get clean && \
     addgroup --system appuser && \
     adduser --system appuser --disabled-login \
