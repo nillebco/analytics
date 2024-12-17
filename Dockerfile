@@ -1,4 +1,4 @@
-FROM python:3-slim as builder
+FROM python:3.12-slim as builder
 
 ARG PORT 17581
 
@@ -28,7 +28,7 @@ RUN cd /app && \
     uv pip install --no-cache -r requirements.txt && \
     mkdir data secrets
 
-FROM python:3-slim as runner
+FROM python:3.12-slim as runner
 RUN apt-get -y update && \
     apt-get install -y --no-install-recommends \
     ffmpeg \
@@ -48,4 +48,4 @@ VOLUME [ "/app/data", "/app/secrets" ]
 ENV NUMBA_CACHE_DIR=/app/data
 ENV PORT=$PORT
 EXPOSE $PORT
-CMD [".venv/bin/uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", $PORT]
+CMD ["/bin/sh", "-c", "echo $DATABASE_URL && .venv/bin/uvicorn api.app:app --host 0.0.0.0 --port $PORT"]

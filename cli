@@ -76,7 +76,9 @@ build_image() {
     set -eux
     . .venv/bin/activate
     load_dotenv
-    docker build --build-arg PORT=8017 -t nillebco/$APP_NAME:$VERSION .
+    VERSION=$(python -m api.version)
+    APP_NAME=$(python -m api.app_name)
+    docker build --label "org.opencontainers.image.ref.name=$APP_NAME:$VERSION" --build-arg PORT=8017 -t nillebco/$APP_NAME:$VERSION .
     if [ -f $APP_NAME.tar.gz ]; then
         rm $APP_NAME.tar.gz
     fi
@@ -99,7 +101,7 @@ docker_run() {
     docker volume create $APP_NAME-secrets
     : "${POSTGRES_USER:=nillebco}"
     DATABASE_URL="postgresql+asyncpg://$POSTGRES_USER:${POSTGRES_PASSWORD}@postgres-$APP_NAME/$APP_NAME"
-    docker run --rm --network $APP_NAME-network --name $APP_NAME -v $APP_NAME-data:/app/data -v $APP_NAME-secrets:/app/secrets -e DATABASE_URL="${DATABASE_URL}" -e PORT=8017 -p 8018:8018 "${@:2}" nillebco/$APP_NAME:$VERSION
+    docker run --rm --network $APP_NAME-network --name $APP_NAME -v $APP_NAME-data:/app/data -v $APP_NAME-secrets:/app/secrets -e DATABASE_URL="${DATABASE_URL}" -e PORT=8017 -p 8018:8018 -it nillebco/$APP_NAME:$VERSION "${@:2}"
 }
 
 zapscan() {
@@ -137,6 +139,12 @@ case "$1" in
         ;;
     build-image)
         build_image
+        ;;
+    docker-run-deps)
+        docker_run_deps $@
+        ;;
+    docker-run)
+        docker_run $@
         ;;
     zapscan)
         zapscan

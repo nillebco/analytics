@@ -17,14 +17,13 @@ else:
         _raw_configuration = yaml.safe_load(stream)
 
 
-def get_secret(lowercase_secret_name: str, default=None):
+def get_secret(secret_name: str, default=None):
     if not default:
         default = ""
 
-    uppercase = lowercase_secret_name.upper()
-    secret = _raw_configuration.get(
-        lowercase_secret_name, os.environ.get(uppercase, default)
-    )
+    lowercase = secret_name.lower()
+    uppercase = lowercase.upper()
+    secret = _raw_configuration.get(lowercase, os.environ.get(uppercase, default))
 
     return secret
 

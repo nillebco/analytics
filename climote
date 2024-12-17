@@ -1,0 +1,81 @@
+load_dotenv() {
+    VERSION=$(python -m api.version)
+    APP_NAME=$(python -m api.app_name)
+    if [ -f .env ]; then
+        # export $(cat .env | xargs)
+        set -a; source .env; set +a
+    fi
+}
+
+get_server_ip() {
+    load_dotenv
+    if [ -z "$server_ip" ]; then
+        pushd terraform
+        export server_ip=$(terraform output -json "servers_ips" | jq -r '.["podman-server-0"]')
+        popd
+    fi
+    echo "server ip is $server_ip"
+}
+
+invoke_ssh() {
+    get_server_ip
+    ssh -i $ssh_key_file devops@$server_ip
+}
+
+invoke_tunnel() {
+    get_server_ip
+    echo ssh -L 8081:localhost:8080 -L 5432:localhost:5432 -i $ssh_key_file devops@$server_ip
+    ssh -L 8081:localhost:8080 -L 5432:localhost:5432 -i $ssh_key_file devops@$server_ip
+}
+
+upload_image() {
+    get_server_ip
+    PORTPAIR=${PORTPAIR:-8080:8080}
+    scp -i $ssh_key_file $APP_NAME.tar.gz devops@$server_ip:/home/devops/$APP_NAME.tar.gz
+    sha256sum $APP_NAME.tar.gz
+    echo "now execute './cliops load-image $APP_NAME.tar.gz && ./cliops start $APP_NAME $VERSION $PORTPAIR' on the server"
+}
+
+upload_cliops() {
+    get_server_ip
+    scp -i $ssh_key_file cliops devops@$server_ip:/home/devops/cliops
+}
+
+invoke_scp_to() {
+    $FILENAME=$2
+    get_server_ip
+    scp -i $ssh_key_file $FILENAME devops@$server_ip:/home/devops/$FILENAME
+}
+
+invoke_scp_from() {
+    $FILENAME=$2
+    get_server_ip
+    scp -i $ssh_key_file devops@$server_ip:/home/devops/$FILENAME $FILENAME
+}
+
+case "$1" in
+    ssh)
+        invoke_ssh
+        ;;
+    tunnel)
+        invoke_tunnel
+        ;;
+    scp_to)
+        invoke_scp_to
+        ;;
+    scp_from)
+        invoke_scp_from
+        ;;
+    upload-image)
+        upload_image
+        ;;
+    upload-cliops)
+        upload_cliops
+        ;;
+    server-ip)
+        get_server_ip
+        ;;
+    *)
+        echo "Error: Invalid command. Available commands: ssh | tunnel | upload-image"
+        ;;
+esac
