@@ -13,8 +13,11 @@ from api.routers.identify import identify
 from .common import generate_guid
 from .constants import (
     ANALYTICS_API,
+    ANALYTICS_HOST_PROPERTY_SLUG,
+    ANALYTICS_PROPERTY_ID,
     API_PREFIX,
     APP_NAME,
+    DEFAULT_PROPERTY_ID,
     IS_DEV,
     OWNER_EMAIL,
     OWNER_NAME,
@@ -33,9 +36,6 @@ from .version import __version__
 
 origins = ["*"]
 
-NOT_AUTHORIZED = "Not Authorized"
-DEFAULT_PROPERTY_ID = generate_guid(OWNER_EMAIL + PROPERTY_SLUG)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,6 +46,9 @@ async def lifespan(app: FastAPI):
         OWNER_EMAIL,
     )
     await get_or_create_property(DEFAULT_PROPERTY_ID, user.id, PROPERTY_SLUG)
+    await get_or_create_property(
+        ANALYTICS_PROPERTY_ID, user.id, ANALYTICS_HOST_PROPERTY_SLUG
+    )
     yield
 
 
@@ -102,9 +105,9 @@ async def catch_all(
     if rest_of_path.startswith("latest/meta-data"):
         raise HTTPException(status_code=404, detail="Not found")
 
-    data = await request.json()
+    data = {"page_url": request.headers.get("referer"), "event_type": "catch_all"}
     background_tasks.add_task(
-        log_request, data, request.headers, request.client, PROPERTY_SLUG
+        log_request, data, request.headers, request.client, ANALYTICS_PROPERTY_ID
     )
     context = {
         "request": request,
@@ -112,7 +115,9 @@ async def catch_all(
         "API_PREFIX": API_PREFIX,
         "ANALYTICS_API": ANALYTICS_API,
     }
-    logger.info(f"catch_all: {rest_of_path}, query_params: {request.query_params}")
+    logger.info(
+        f"catch_all: {rest_of_path}, query_params: {request.query_params}, headers: {request.headers}"
+    )
     try:
         path = (
             f"{rest_of_path}index.html" if rest_of_path.endswith("/") else rest_of_path
