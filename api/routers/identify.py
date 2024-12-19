@@ -10,6 +10,7 @@ from api.times import utc_now
 
 from ..common import sha256sum
 from ..database.types import Event
+from ..logger import logger
 
 
 def get_country_from_ip(ip_address):
@@ -22,6 +23,7 @@ def get_country_from_ip(ip_address):
             "city": data.get("city"),
         }
     else:
+        logger.error(f"Failed to get country from IP: {ip_address}, {response.text}")
         return {"error": "Unable to fetch IP information"}
 
 
