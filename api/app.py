@@ -88,9 +88,8 @@ def lazy_templates_loader():
     return TEMPLATES["templates"]
 
 
-async def log_request(request: Request, property_id: str):
-    data = await request.json()
-    event = await identify(data, request.headers, request.client, property_id)
+async def log_request(data, headers, client, property_id: str):
+    event = await identify(data, headers, client, property_id)
     await collect(event)
 
 
@@ -103,7 +102,10 @@ async def catch_all(
     if rest_of_path.startswith("latest/meta-data"):
         raise HTTPException(status_code=404, detail="Not found")
 
-    background_tasks.add_task(log_request, request, PROPERTY_SLUG)
+    data = await request.json()
+    background_tasks.add_task(
+        log_request, data, request.headers, request.client, PROPERTY_SLUG
+    )
     context = {
         "request": request,
         "base_url": str(request.base_url).rstrip("/"),
