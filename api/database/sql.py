@@ -75,7 +75,7 @@ async def execute_statement(session: AsyncSession, stmt: SelectOfScalar[_T]):
 async def collect(event: Event):
     async with session_scope() as session:
         session.add(event)
-        session.commit()
+        await session.commit()
 
 
 async def cleanup_old_data():
@@ -87,7 +87,7 @@ async def cleanup_old_data():
             "DELETE FROM analytics WHERE timestamp < :cutoff_date",
             {"cutoff_date": cutoff_date},
         )
-        session.commit()
+        await session.commit()
 
 
 async def _get_user_by_email(session: AsyncSession, user_email: str) -> Optional[User]:
