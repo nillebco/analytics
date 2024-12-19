@@ -21,7 +21,7 @@ class Property(SQLModel, table=True):
     owner: User = Relationship()
 
 
-class AnalyticsEvent(SQLModel, table=True):
+class Event(SQLModel, table=True):
     id: Optional[str] = Field(default=None, primary_key=True)
     timestamp: datetime = Field(
         sa_column=Column(TIMESTAMP(timezone=True), nullable=False),
@@ -33,3 +33,19 @@ class AnalyticsEvent(SQLModel, table=True):
     user_agent: Optional[str] = None
     property_id: str = Field(foreign_key="property.id")
     property: Property = Relationship()
+    accept_language: Optional[str] = None
+    hashed_ip_address: Optional[str] = None
+    unique_user_id: Optional[str] = None
+    domain: Optional[str] = None
+    browser: Optional[str] = None
+    os: Optional[str] = None
+    device: Optional[str] = None
+    is_mobile: Optional[bool] = None
+    is_tablet: Optional[bool] = None
+    is_pc: Optional[bool] = None
+    is_bot: Optional[bool] = None
+    country: Optional[str] = None
+    region: Optional[str] = None
+    city: Optional[str] = None
+    page_path: Optional[str] = None
+    session_id: Optional[str] = None

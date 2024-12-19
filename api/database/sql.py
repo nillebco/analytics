@@ -17,7 +17,7 @@ from ..constants import IS_TESTING
 from ..logger import logger
 from ..secrets import DATABASE_URL
 from ..times import utc_now
-from .types import AnalyticsEvent, Property, User
+from .types import Event, Property, User
 
 IN_MEMORY_DATABASE = "sqlite+aiosqlite://"
 connection_string = (
@@ -72,24 +72,8 @@ async def execute_statement(session: AsyncSession, stmt: SelectOfScalar[_T]):
             await asyncio.sleep(0.1)
 
 
-async def collect(
-    uid: str,
-    event_type: str,
-    page_url: Optional[str] = None,
-    user_agent: Optional[str] = None,
-    referrer: Optional[str] = None,
-    property_id: Optional[str] = None,
-):
+async def collect(event: Event):
     async with session_scope() as session:
-        event = AnalyticsEvent(
-            id=uid,
-            event_type=event_type,
-            page_url=page_url,
-            referrer=referrer,
-            user_agent=user_agent,
-            property_id=property_id,
-        )
-
         session.add(event)
         session.commit()
 

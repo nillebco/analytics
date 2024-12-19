@@ -115,11 +115,11 @@ pre-commit==4.0.1
     # via -r dev-requirements.in
 propcache==0.2.1
     # via yarl
-pydantic==2.10.3
+pydantic==2.10.4
     # via
     #   fastapi
     #   sqlmodel
-pydantic-core==2.27.1
+pydantic-core==2.27.2
     # via pydantic
 pygments==2.18.0
     # via rich
@@ -198,10 +198,16 @@ typing-extensions==4.12.2
     #   pydantic-core
     #   sqlalchemy
     #   typer
+ua-parser==1.0.0
+    # via user-agents
+ua-parser-builtins==0.18.0.post1
+    # via ua-parser
 urllib3==2.2.3
     # via
     #   requests
     #   vcrpy
+user-agents==2.2.0
+    # via -r requirements.in
 uuid7==0.1.0
     # via -r requirements.in
 uvicorn==0.34.0

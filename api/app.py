@@ -2,11 +2,13 @@ import os
 from contextlib import asynccontextmanager
 from datetime import timedelta
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from jinja2 import Template, TemplateNotFound
+
+from api.routers.identify import identify
 
 from .common import generate_guid
 from .constants import (
@@ -18,7 +20,12 @@ from .constants import (
     OWNER_NAME,
     PROPERTY_SLUG,
 )
-from .database.sql import get_or_create_property, get_or_create_user, recreate_tables
+from .database.sql import (
+    collect,
+    create_tables,
+    get_or_create_property,
+    get_or_create_user,
+)
 from .logger import logger
 from .routers import analytics
 from .times import utc_now
@@ -27,19 +34,18 @@ from .version import __version__
 origins = ["*"]
 
 NOT_AUTHORIZED = "Not Authorized"
+DEFAULT_PROPERTY_ID = generate_guid(OWNER_EMAIL + PROPERTY_SLUG)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await recreate_tables()
+    await create_tables()
     user = await get_or_create_user(
         generate_guid(OWNER_EMAIL),
         OWNER_NAME,
         OWNER_EMAIL,
     )
-    await get_or_create_property(
-        generate_guid(OWNER_EMAIL + PROPERTY_SLUG), user.id, PROPERTY_SLUG
-    )
+    await get_or_create_property(DEFAULT_PROPERTY_ID, user.id, PROPERTY_SLUG)
     yield
 
 
@@ -82,14 +88,21 @@ def lazy_templates_loader():
     return TEMPLATES["templates"]
 
 
+async def log_request(request: Request, property_id: str):
+    event = await identify(request, property_id)
+    await collect(event)
+
+
 @app.get("/{rest_of_path:path}", include_in_schema=False)
 async def catch_all(
     request: Request,
     rest_of_path: str,
+    background_tasks: BackgroundTasks,
 ):
     if rest_of_path.startswith("latest/meta-data"):
         raise HTTPException(status_code=404, detail="Not found")
 
+    background_tasks.add_task(log_request, request, PROPERTY_SLUG)
     context = {
         "request": request,
         "base_url": str(request.base_url).rstrip("/"),
