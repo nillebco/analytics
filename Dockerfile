@@ -29,16 +29,16 @@ RUN cd /app && \
     mkdir data secrets
 
 FROM python:3.12-slim as runner
+COPY --from=builder /app/ /app/
 RUN apt-get -y update && \
     apt-get install -y --no-install-recommends \
     apt-get clean && \
     addgroup --system appuser && \
     adduser --system appuser --disabled-login \
+    chown -R appuser:appuser /app/data /app/secrets && \
     --ingroup appuser --no-create-home \
     --home /nonexistent --gecos "nonroot user" --shell /bin/false || true
 
-COPY --from=builder /app/ /app/
-RUN chown -R appuser:appuser /app/data /app/secrets
 USER appuser
 
 WORKDIR /app

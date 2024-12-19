@@ -2,7 +2,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import Request
+from starlette.datastructures import Address, Headers
 from user_agents import parse
 from uuid_extensions import uuid7str  # type: ignore
 
@@ -25,16 +25,17 @@ def get_country_from_ip(ip_address):
         return {"error": "Unable to fetch IP information"}
 
 
-async def identify(request: Request, property_id: Optional[str] = None):
-    data = await request.json()
+async def identify(
+    data: dict, headers: Headers, client: Address, property_id: Optional[str] = None
+):
     event_type = data.get("event_type", "page_view")
     page_url = data.get("page_url", "unknown")
-    referrer = request.headers.get("referrer", None)
-    user_agent_str = request.headers.get("user-agent", None)
+    referrer = headers.get("referrer", None)
+    user_agent_str = headers.get("user-agent", None)
     user_agent = parse(user_agent_str)
     hashed_user_agent = sha256sum(user_agent_str) if user_agent_str else None
-    accept_language = request.headers.get("accept-language", None)
-    ip_address = request.client.host
+    accept_language = headers.get("accept-language", None)
+    ip_address = client.host
     hashed_ip_address = sha256sum(ip_address)
     event_uid = uuid7str()
     hashed_accept_language = sha256sum(accept_language) if accept_language else None

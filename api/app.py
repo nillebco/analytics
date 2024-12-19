@@ -89,7 +89,8 @@ def lazy_templates_loader():
 
 
 async def log_request(request: Request, property_id: str):
-    event = await identify(request, property_id)
+    data = await request.json()
+    event = await identify(data, request.headers, request.client, property_id)
     await collect(event)
 
 

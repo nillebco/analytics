@@ -18,7 +18,8 @@ async def collect_analytics(request: Request, property_id: Optional[str] = None)
     if not property:
         return JSONResponse({"status": "not found"}, status_code=404)
 
-    event = await identify(request, property_id)
+    data = await request.json()
+    event = await identify(data, request.headers, request.client, property_id)
     await collect(event)
 
     return {"status": "success", "messsage": "Thank you!"}
