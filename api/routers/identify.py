@@ -16,7 +16,7 @@ from ..logger import logger
 def get_country_from_ip(ip_address):
     response = httpx.get(f"https://ipinfo.io/{ip_address}/json")
     if response.status_code == 200:
-        data = response.json()
+        data: dict = response.json()
         return {
             "country": data.get("country"),
             "region": data.get("region"),
@@ -37,11 +37,11 @@ async def identify(
     user_agent = parse(user_agent_str)
     hashed_user_agent = sha256sum(user_agent_str) if user_agent_str else None
     accept_language = headers.get("accept-language", None)
-    ip_address = client.host
+    ip_address = headers.get("x-forwarded-for")  # the service is behind a reverse proxy
     hashed_ip_address = sha256sum(ip_address)
     event_uid = uuid7str()
     hashed_accept_language = sha256sum(accept_language) if accept_language else None
-    parsed = urlparse(page_url)
+    parsed = urlparse(page_url or "")  # force the type to be a string
     domain = parsed.netloc
     page_path = parsed.path
 

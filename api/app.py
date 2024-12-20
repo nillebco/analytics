@@ -8,8 +8,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from jinja2 import Template, TemplateNotFound
 
-from api.routers.identify import identify
-
 from .common import generate_guid
 from .constants import (
     ANALYTICS_API,
@@ -31,6 +29,7 @@ from .database.sql import (
 )
 from .logger import logger
 from .routers import analytics
+from .routers.identify import identify
 from .times import utc_now
 from .version import __version__
 
@@ -105,7 +104,8 @@ async def catch_all(
     if rest_of_path.startswith("latest/meta-data"):
         raise HTTPException(status_code=404, detail="Not found")
 
-    data = {"page_url": request.headers.get("referer"), "event_type": "catch_all"}
+    page_url = request.headers.get("referer") or request.headers.get("x-forwarded-host")
+    data = {"page_url": page_url, "event_type": "catch_all"}
     background_tasks.add_task(
         log_request, data, request.headers, request.client, ANALYTICS_PROPERTY_ID
     )
