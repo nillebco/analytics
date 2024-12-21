@@ -104,14 +104,19 @@ async def catch_all(
     if rest_of_path.startswith("latest/meta-data"):
         raise HTTPException(status_code=404, detail="Not found")
 
-    page_url = request.headers.get("referer") or request.headers.get("x-forwarded-host")
+    fwd_proto = request.headers.get("x-forwarded-proto")
+    fwd_host = request.headers.get("x-forwarded-host")
+    page_url = request.headers.get("referer") or fwd_host
     data = {"page_url": page_url, "event_type": "catch_all"}
+    base_url = (
+        f"{fwd_proto}://{fwd_host}" if fwd_proto and fwd_host else request.base_url
+    )
     background_tasks.add_task(
         log_request, data, request.headers, request.client, ANALYTICS_PROPERTY_ID
     )
     context = {
         "request": request,
-        "base_url": str(request.base_url).rstrip("/"),
+        "base_url": str(base_url).rstrip("/"),
         "API_PREFIX": API_PREFIX,
         "ANALYTICS_API": ANALYTICS_API,
     }
