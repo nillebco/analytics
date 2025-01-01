@@ -10,6 +10,5 @@ pre-commit
 ruff
 types-PyYAML
 pytest-asyncio
-aiosqlite
 bandit
 cruft

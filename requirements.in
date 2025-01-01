@@ -11,3 +11,4 @@ pyjwt
 uuid7
 greenlet
 user-agents
+aiosqlite
