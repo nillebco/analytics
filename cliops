@@ -1,0 +1,80 @@
+load_dotenv() {
+    if [ -f .env ]; then
+        # export $(cat .env | xargs)
+        set -a; source .env; set +a
+    fi
+}
+
+load_dotenv
+env | grep cliops_
+
+install_app() {
+    APPNAME=$2
+    mkdir -p data-$APPNAME
+    mkdir -p secrets-$APPNAME
+    podman unshare chown 100:101 -R data-$APPNAME
+}
+
+load_image() {
+    APPNAME=$2
+    VERSION=$3
+    FILENAME=$APPNAME.tar.gz
+    set -eux
+    if [ ! -f $FILENAME ]; then
+        echo "$FILENAME does not exist"
+        exit 1
+    fi
+    sha256sum $FILENAME
+    IMAGE_NAME=$(gunzip -c $FILENAME | podman load | grep "Loaded image(s):" | sed 's/Loaded image(s): //')
+    IMAGE_ID=$(podman images --filter reference="${IMAGE_NAME}" --format "{{.ID}}")
+    echo "loaded image: $IMAGE_NAME $IMAGE_ID"
+    podman tag $IMAGE_ID nillebco/$APPNAME:$VERSION
+}
+
+start() {
+    set +eu -x
+    APPNAME=$2
+    VERSION=$3
+    PORT=$4
+    NETWORK=$5
+
+    set +e -x
+    load_dotenv
+
+    if [ -z "$NETWORK" ]; then
+        if [ -n "$cliops_NETWORK" ]; then
+            NETWORK=$cliops_NETWORK
+        fi
+    fi
+    NETWORK=${NETWORK:-services-network}
+
+    set -u
+    podman logs $APPNAME > $APPNAME-$VERSION-pre.log 2>&1
+    podman stop $APPNAME
+    podman rm $APPNAME
+    set -eux
+    podman run -d --network $NETWORK --name $APPNAME --restart=always -u 100 -p $PORT:$PORT -e PORT=$PORT -v ./data-$APPNAME:/app/data:Z -v ./secrets-$APPNAME:/app/secrets nillebco/$APPNAME:$VERSION
+}
+
+load_and_start() {
+    load_image $@
+    start $@
+}
+
+case "$1" in
+    install-app)
+        install_app $@
+        ;;
+    load-image)
+        load_image $@
+        ;;
+    start)
+        start $@
+        ;;
+    load-and-start)
+        load_and_start $@
+        ;;
+    *)
+        echo "Error: Invalid command. Available commands: load-image | start | clean-pod"
+        ;;
+esac

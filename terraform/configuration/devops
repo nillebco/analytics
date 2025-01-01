@@ -1,0 +1,48 @@
+# these commands must be exeucted on the server
+if [ "$1" == "install" ]; then
+    mkdir -p caddy-config/data caddy-config/config caddy-config/socket-activation caddy-config/static
+    mkdir -p $HOME/.config/systemd/user
+    mkdir postgres-data
+    echo "copy the Caddyfile file from your computer to $(pwd)/caddy-config/socket-activation/Caddyfile"
+    echo "copy the caddy.service file to ~/.config/systemd/user/caddy.service"
+    read -p "Press enter to continue"
+
+    conffile=$(podman network create caddy-network)
+    sed -ie '/^   "cniVersion": "1.0.0",/s/^.*$/   "cniVersion": "0.4.0",/' $conffile
+
+    conffile=$(podman network create services-network)
+    sed -ie '/^   "cniVersion": "1.0.0",/s/^.*$/   "cniVersion": "0.4.0",/' $conffile
+
+    sudo loginctl enable-linger $(whoami)
+    loginctl show-user $(whoami) --property=Linger
+
+    # sudo nano /etc/sysctl.conf
+    # net.ipv4.ip_unprivileged_port_start = 80
+    expected_line="net.ipv4.ip_unprivileged_port_start = 80"
+    grep -qE "^#?$expected_line" /etc/sysctl.conf
+    if [ $? -eq 0 ]; then
+        # Uncomment the line if it's present but commented out
+        sudo sed -i "s|^#\($expected_line\)|\1|" /etc/sysctl.conf
+    else
+        # Add the expected line if it's not present
+        echo "$expected_line" | sudo tee -a /etc/sysctl.conf
+    fi
+
+    sudo sysctl -p /etc/sysctl.conf
+    sysctl net.ipv4.ip_unprivileged_port_start
+    systemctl --user daemon-reload
+
+    curl -o ~/.config/systemd/user/caddy.socket https://raw.githubusercontent.com/nillebco/podman-caddy-socket-activation/main/examples/example4/caddy.socket
+
+    podman create --name caddy --network=caddy-network --restart=always -v $(pwd)/caddy-config/socket-activation/Caddyfile:/etc/caddy/Caddyfile:Z -v $(pwd)/caddy-config/static:/srv:Z,ro -v $(pwd)/caddy-config/data:/data -v $(pwd)/caddy-config/config:/config docker.io/caddy:2.9
+    podman network connect services-network caddy
+    systemctl --user enable caddy.service
+    systemctl --user enable caddy.socket
+    systemctl --user start caddy.socket
+    # if a request arrives on port 80, this will start caddy.service
+    # check caddy service logs with
+    # journalctl --user -u caddy.service
+elif [ "$1" == "pgsql" ]; then
+    podman pod create --name pgsql-pod --network=services-network -p 5432:5432
+    podman run --pod pgsql-pod -d --name pgsql --restart=always -v $(pwd)/postgres-data:/var/lib/postgresql/data -e POSTGRES_USER=admin -e POSTGRES_DB=admin -e POSTGRES_PASSWORD=Jjfq7BX3uNZdfRvLmWD42qTiozU8jfhh3Uzjq4wCeeTshRSg2Hv2QgqtC2ZeNtUx docker.io/pgvector/pgvector:pg16
+fi

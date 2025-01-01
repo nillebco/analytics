@@ -1,0 +1,15 @@
+[Unit]
+Description=Caddy web server
+Requires=caddy.socket
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/podman start -a caddy
+ExecStop=/usr/bin/podman stop -t 10 caddy
+Restart=always
+KillMode=control-group
+TimeoutStopSec=10
+Delegate=yes
+
+[Install]
+WantedBy=default.target

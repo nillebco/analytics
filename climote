@@ -30,27 +30,27 @@ invoke_tunnel() {
 
 upload_image() {
     get_server_ip
-    PORTPAIR=${PORTPAIR:-8080:8080}
-    scp -i $ssh_key_file $APP_NAME.tar.gz devops@$server_ip:/home/devops/$APP_NAME.tar.gz
+    PORT=${PORT:-8018}
+    scp -i $ssh_key_file $APP_NAME.tar.gz devops@$server_ip:/home/devops/apps/$APP_NAME.tar.gz
     sha256sum $APP_NAME.tar.gz
-    echo "now execute './cliops load-and-start $APP_NAME $VERSION $PORTPAIR nillebco-pod' on the server"
+    echo "now execute './cliops load-and-start $APP_NAME $VERSION $PORT' on the server"
 }
 
 upload_cliops() {
     get_server_ip
-    scp -i $ssh_key_file cliops devops@$server_ip:/home/devops/cliops
+    scp -i $ssh_key_file cliops devops@$server_ip:/home/devops/apps/cliops
 }
 
 invoke_scp_to() {
-    $FILENAME=$2
+    FILENAME=$2
     get_server_ip
-    scp -i $ssh_key_file $FILENAME devops@$server_ip:/home/devops/$FILENAME
+    scp -i $ssh_key_file $FILENAME devops@$server_ip:/home/devops/apps/$FILENAME
 }
 
 invoke_scp_from() {
-    $FILENAME=$2
+    FILENAME=$2
     get_server_ip
-    scp -i $ssh_key_file devops@$server_ip:/home/devops/$FILENAME $FILENAME
+    scp -i $ssh_key_file devops@$server_ip:/home/devops/apps/$FILENAME $FILENAME
 }
 
 case "$1" in
@@ -61,10 +61,10 @@ case "$1" in
         invoke_tunnel
         ;;
     scp_to)
-        invoke_scp_to
+        invoke_scp_to $@
         ;;
     scp_from)
-        invoke_scp_from
+        invoke_scp_from $@
         ;;
     upload-image)
         upload_image

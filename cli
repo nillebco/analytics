@@ -87,6 +87,14 @@ build_image() {
     sha256sum $APP_NAME.tar.gz
 }
 
+deploy() {
+    pushd terraform
+    terraform init
+    terraform plan -var-file=../secrets/vars.tfvars
+    terraform apply -var-file=../secrets/vars.tfvars
+    popd
+}
+
 docker_run_deps() {
     load_dotenv
     docker volume create postgres-data
