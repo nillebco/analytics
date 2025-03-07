@@ -6,15 +6,20 @@ users:
     shell: /bin/bash
     ssh_authorized_keys:
       - ${SSH_KEY_CONTENT}
-mounts:
-  - ["/dev/disk/by-id/scsi-0HC_Volume_${VOLUME_ID}", "/home/devops/apps"]
 package_update: true
 package_upgrade: true
+write_files:
+- encoding: b64
+  content: ${B64_DEVOPS_CONTENT}
+  owner: devops:devops
+  path: /home/devops/devops
+  permissions: '0755'
 packages:
   - fail2ban
   - ufw
   - podman
 runcmd:
+  - printf "[sshd]\nenabled = true\nbanaction = iptables-multiport" > /etc/fail2ban/jail.local
   - systemctl enable ssh
   - systemctl enable fail2ban
   - systemctl start fail2ban
@@ -33,10 +38,10 @@ runcmd:
   - systemctl restart ssh
   - sudo systemctl enable --now cni-dhcp.socket
   - mkdir /home/devops/apps
-# - mkfs.xfs /dev/disk/by-id/scsi-0HC_Volume_${VOLUME_ID}
-# - echo "/dev/disk/by-id/scsi-0HC_Volume_${VOLUME_ID} /home/devops/apps xfs defaults 0 0" >> /etc/fstab
+  - mkfs.xfs /dev/disk/by-id/scsi-0HC_Volume_{{VOLUME_ID}}
   - mount /dev/disk/by-id/scsi-0HC_Volume_${VOLUME_ID} /home/devops/apps
-  - printf "[sshd]\nenabled = true\nbanaction = iptables-multiport" > /etc/fail2ban/jail.local
   - chown devops:devops /home/devops
   - chown devops:devops /home/devops/apps
+  - cp /home/devops/devops /home/devops/apps
+  - echo "/dev/disk/by-id/scsi-0HC_Volume_{{VOLUME_ID}} /home/devops/apps xfs defaults 0 0" >> /etc/fstab
   - reboot

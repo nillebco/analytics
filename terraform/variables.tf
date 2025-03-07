@@ -51,3 +51,7 @@ variable "cloudflare_account_id" {
 
 variable "domain_name" {
 }
+
+variable "ssh_key_path" {
+  default = "~/.ssh/id_rsa.pub"
+}
