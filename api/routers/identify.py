@@ -32,7 +32,9 @@ async def identify(
 ):
     event_type = data.get("event_type", "page_view")
     page_url = data.get("page_url", "unknown")
-    referrer = headers.get("referrer", None)
+    # the Referer header of the beacon is the tracked page itself: the visitor's
+    # real source is document.referrer, sent by simple.js in the payload
+    referrer = data.get("referrer") or None
     user_agent_str = headers.get("user-agent", None)
     user_agent = parse(user_agent_str)
     hashed_user_agent = sha256sum(user_agent_str) if user_agent_str else None

@@ -6,6 +6,7 @@ const a7s = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 page_url: window.location.href,
+                referrer: document.referrer || null,
                 event: event
             })
         });
