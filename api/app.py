@@ -128,6 +128,7 @@ async def catch_all(
             f"{rest_of_path}index.html" if rest_of_path.endswith("/") else rest_of_path
         )
         response = lazy_templates_loader().TemplateResponse(
+            request,
             path,
             context,
         )
