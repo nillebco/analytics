@@ -126,7 +126,7 @@ main() {
     [[ "$(git rev-parse --abbrev-ref HEAD)" == main ]] || { log "not on main"; return 1; }
     git diff --quiet HEAD -- requirements.in requirements.txt dev-requirements.txt api/version.py \
         || { log "uncommitted changes to the pinned files, refusing to run"; return 1; }
-    git pull -q --ff-only
+    git pull -q --no-rebase --ff-only
 
     upgrade_pins
     audit
