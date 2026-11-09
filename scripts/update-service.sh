@@ -24,6 +24,22 @@ log() { echo "[$(date '+%F %T')] $*"; }
 remote() { ssh -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=20 -i "$ANALYTICS_SSH_KEY" "$ANALYTICS_SSH" "$@"; }
 version() { sed -n 's/^__version__ = "\(.*\)"/\1/p' api/version.py; }
 
+# The commit at the end of a run is what records the version that was deployed,
+# and it runs the git hook. A pre-commit whose interpreter has been upgraded
+# away turns a successful deploy into a failed job (2026-11-09: the Homebrew
+# shim still pointed at python@3.11), so check it before building anything.
+preflight_hooks() {
+    if [[ -f .git/hooks/pre-commit ]]; then
+        local py
+        py=$(sed -n 's/^INSTALL_PYTHON=//p' .git/hooks/pre-commit)
+        if [[ -n "$py" && ! -x "$py" ]]; then
+            log "pre-commit hook points at a missing interpreter ($py); run 'pre-commit install'"
+            return 1
+        fi
+    fi
+    command -v pre-commit >/dev/null || { log "pre-commit is not on PATH"; return 1; }
+}
+
 ensure_docker() {
     docker info >/dev/null 2>&1 && return
     log "starting colima"
@@ -116,6 +132,7 @@ publish() {
 
 main() {
     ensure_docker
+    preflight_hooks
     if [[ "${1:-}" == "--deploy" ]]; then
         smoke_test
         build "$(version)" "$(base_digest)"
