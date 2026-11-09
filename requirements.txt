@@ -17,9 +17,9 @@ certifi==2026.10.23
     # via
     #   httpcore
     #   httpx
-click==8.5.0
+click==8.5.1
     # via uvicorn
-fastapi==0.162.0
+fastapi==0.162.2
     # via -r requirements.in
 greenlet==3.5.6
     # via -r requirements.in
@@ -43,11 +43,11 @@ markupsafe==3.0.4
     # via jinja2
 opentelemetry-api==1.45.2
     # via fastapi
-pydantic==2.14.2
+pydantic==2.14.3
     # via
     #   fastapi
     #   sqlmodel
-pydantic-core==2.50.2
+pydantic-core==2.50.4
     # via pydantic
 pyjwt==2.15.1
     # via -r requirements.in
@@ -78,7 +78,7 @@ typing-extensions==4.16.0
     #   sqlmodel
     #   starlette
     #   typing-inspection
-typing-inspection==0.4.4
+typing-inspection==0.4.5
     # via
     #   fastapi
     #   pydantic
