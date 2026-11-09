@@ -28,16 +28,20 @@ version() { sed -n 's/^__version__ = "\(.*\)"/\1/p' api/version.py; }
 # and it runs the git hook. A pre-commit whose interpreter has been upgraded
 # away turns a successful deploy into a failed job (2026-11-09: the Homebrew
 # shim still pointed at python@3.11), so check it before building anything.
+# Resolve the runner the way the hook does (prek or pre-commit, absolute path
+# first, then PATH) and run it: being on PATH proves nothing when the shebang
+# behind it is dead.
 preflight_hooks() {
-    if [[ -f .git/hooks/pre-commit ]]; then
-        local py
-        py=$(sed -n 's/^INSTALL_PYTHON=//p' .git/hooks/pre-commit)
-        if [[ -n "$py" && ! -x "$py" ]]; then
-            log "pre-commit hook points at a missing interpreter ($py); run 'pre-commit install'"
-            return 1
-        fi
+    local hook=.git/hooks/pre-commit runner=() p
+    [[ -f $hook ]] || return 0
+    if p=$(sed -n 's/^PREK="\(.*\)"$/\1/p' "$hook") && [[ -n $p ]]; then
+        if [[ -x $p ]]; then runner=("$p"); else runner=(prek); fi
+    else
+        p=$(sed -n 's/^INSTALL_PYTHON=//p' "$hook")
+        if [[ -n $p && -x $p ]]; then runner=("$p" -mpre_commit); else runner=(pre-commit); fi
     fi
-    command -v pre-commit >/dev/null || { log "pre-commit is not on PATH"; return 1; }
+    "${runner[@]}" --version >/dev/null 2>&1 \
+        || { log "pre-commit hook runner '${runner[*]}' does not run; reinstall the hook (prek install --overwrite)"; return 1; }
 }
 
 ensure_docker() {
