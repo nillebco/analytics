@@ -30,7 +30,9 @@ last_month = (today.replace(day=1) - datetime.timedelta(days=1))
 for month in (today, last_month):
     url = f"https://download.db-ip.com/free/dbip-country-lite-{month:%Y-%m}.mmdb.gz"
     try:
-        data = urllib.request.urlopen(url, timeout=60).read()
+        # DB-IP answers 403 to the default Python-urllib user agent
+        request = urllib.request.Request(url, headers={"User-Agent": "nillebco-analytics-build"})
+        data = urllib.request.urlopen(request, timeout=60).read()
     except Exception as error:
         print(f"{url}: {error}")
         continue
