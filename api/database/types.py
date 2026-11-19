@@ -49,3 +49,12 @@ class Event(SQLModel, table=True):
     city: Optional[str] = None
     page_path: Optional[str] = None
     session_id: Optional[str] = None
+
+
+class DailySalt(SQLModel, table=True):
+    """Random salt for one UTC day. Visitor and session ids are hashed with it, and
+    yesterday's salt is deleted, so an id cannot be linked to an IP address (or to the
+    same visitor on another day) once the day is over."""
+
+    day: str = Field(primary_key=True)
+    salt: str

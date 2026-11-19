@@ -1,3 +1,4 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -22,6 +23,7 @@ from .constants import (
     PROPERTY_SLUG,
 )
 from .database.sql import (
+    cleanup_old_data,
     collect,
     create_tables,
     get_or_create_property,
@@ -48,7 +50,19 @@ async def lifespan(app: FastAPI):
     await get_or_create_property(
         ANALYTICS_PROPERTY_ID, user.id, ANALYTICS_HOST_PROPERTY_SLUG
     )
+    retention = asyncio.create_task(enforce_retention())
     yield
+    retention.cancel()
+
+
+async def enforce_retention():
+    """Delete events past the retention period at startup, then once a day."""
+    while True:
+        try:
+            await cleanup_old_data()
+        except Exception:
+            logger.exception("retention cleanup failed")
+        await asyncio.sleep(24 * 3600)
 
 
 app = FastAPI(
@@ -120,9 +134,8 @@ async def catch_all(
         "API_PREFIX": API_PREFIX,
         "ANALYTICS_API": ANALYTICS_API,
     }
-    logger.info(
-        f"catch_all: {rest_of_path}, query_params: {request.query_params}, headers: {request.headers}"
-    )
+    # no headers or query string: they carry the visitor's IP address and identifiers
+    logger.info(f"catch_all: {rest_of_path}")
     try:
         path = (
             f"{rest_of_path}index.html" if rest_of_path.endswith("/") else rest_of_path

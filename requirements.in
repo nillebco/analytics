@@ -12,3 +12,4 @@ uuid7
 greenlet
 user-agents
 aiosqlite
+maxminddb

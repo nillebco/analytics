@@ -92,6 +92,8 @@ markdown-it-py==4.3.0
     # via rich
 markupsafe==3.0.4
     # via jinja2
+maxminddb==3.3.0
+    # via -r requirements.in
 mdurl==0.1.2
     # via markdown-it-py
 mypy==2.4.1

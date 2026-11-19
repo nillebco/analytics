@@ -1,7 +1,6 @@
 from typing import Optional
 from urllib.parse import urlparse
 
-import httpx
 from starlette.datastructures import Address, Headers
 from user_agents import parse
 from uuid_extensions import uuid7str  # type: ignore
@@ -9,51 +8,53 @@ from uuid_extensions import uuid7str  # type: ignore
 from api.times import utc_now
 
 from ..common import sha256sum
+from ..database.sql import daily_salt
 from ..database.types import Event
-from ..logger import logger
+from ..geo import country_of
 
 
-def get_country_from_ip(ip_address):
-    response = httpx.get(f"https://ipinfo.io/{ip_address}/json")
-    if response.status_code == 200:
-        data: dict = response.json()
-        return {
-            "country": data.get("country"),
-            "region": data.get("region"),
-            "city": data.get("city"),
-        }
-    else:
-        logger.error(f"Failed to get country from IP: {ip_address}, {response.text}")
-        return {"error": "Unable to fetch IP information"}
+def without_query(url: Optional[str]) -> Optional[str]:
+    """scheme://host/path only: query strings and fragments can carry tokens or emails."""
+    if not url:
+        return url
+    parsed = urlparse(url)
+    if not parsed.scheme and not parsed.netloc:
+        return parsed.path or None
+    return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+
+
+def client_ip(headers: Headers) -> Optional[str]:
+    # the service is behind a reverse proxy; the first hop is the visitor
+    forwarded = headers.get("x-forwarded-for")
+    return forwarded.split(",")[0].strip() if forwarded else None
 
 
 async def identify(
     data: dict, headers: Headers, client: Address, property_id: Optional[str] = None
 ):
     event_type = data.get("event_type", "page_view")
-    page_url = data.get("page_url", "unknown")
+    page_url = without_query(data.get("page_url")) or "unknown"
     # the Referer header of the beacon is the tracked page itself: the visitor's
     # real source is document.referrer, sent by simple.js in the payload
-    referrer = data.get("referrer") or None
+    referrer = without_query(data.get("referrer")) or None
     user_agent_str = headers.get("user-agent", None)
     user_agent = parse(user_agent_str)
-    hashed_user_agent = sha256sum(user_agent_str) if user_agent_str else None
     accept_language = headers.get("accept-language", None)
-    ip_address = headers.get("x-forwarded-for")  # the service is behind a reverse proxy
-    hashed_ip_address = sha256sum(ip_address)
+    ip_address = client_ip(headers)
     event_uid = uuid7str()
-    hashed_accept_language = sha256sum(accept_language) if accept_language else None
     parsed = urlparse(page_url or "")  # force the type to be a string
     domain = parsed.netloc
     page_path = parsed.path
 
-    unique_user_id = sha256sum(
-        f"{hashed_user_agent}{hashed_ip_address}{hashed_accept_language}{domain}"
-    )
+    # Visitor and session ids are salted with a random value that is replaced every UTC
+    # day, so they count unique visitors per day without identifying anyone: the IP
+    # address itself is never stored, and once the salt is gone the ids cannot be
+    # recomputed from it.
+    salt = await daily_salt()
+    fingerprint = f"{user_agent_str}|{ip_address}|{accept_language}|{domain}"
+    unique_user_id = sha256sum(f"{salt}|{fingerprint}")
     date_hour = utc_now().strftime("%Y-%m-%d-%H")
-    session_id = sha256sum(
-        f"{date_hour}{hashed_user_agent}{hashed_ip_address}{hashed_accept_language}{domain}"
-    )
+    session_id = sha256sum(f"{salt}|{date_hour}|{fingerprint}")
     browser = user_agent.browser.family
     os = user_agent.os.family
     device = user_agent.device.family
@@ -62,7 +63,7 @@ async def identify(
     is_pc = user_agent.is_pc
     is_bot = user_agent.is_bot
 
-    country = get_country_from_ip(ip_address)
+    country = country_of(ip_address)
 
     return Event(
         id=event_uid,
@@ -70,9 +71,7 @@ async def identify(
         page_url=page_url,
         referrer=referrer,
         user_agent=user_agent_str,
-        hashed_user_agent=hashed_user_agent,
         accept_language=accept_language,
-        hashed_ip_address=hashed_ip_address,
         unique_user_id=unique_user_id,
         domain=domain,
         browser=browser,
@@ -82,9 +81,7 @@ async def identify(
         is_tablet=is_tablet,
         is_pc=is_pc,
         is_bot=is_bot,
-        country=country.get("country"),
-        region=country.get("region"),
-        city=country.get("city"),
+        country=country,
         property_id=property_id,
         page_path=page_path,
         session_id=session_id,

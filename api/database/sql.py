@@ -1,4 +1,5 @@
 import asyncio
+import secrets
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import AsyncGenerator, Optional
@@ -10,14 +11,14 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlmodel import SQLModel, select
+from sqlmodel import SQLModel, delete, select
 from sqlmodel.sql.expression import _T, SelectOfScalar
 
 from ..constants import IS_TESTING
 from ..logger import logger
 from ..secrets import DATABASE_URL
 from ..times import utc_now
-from .types import Event, Property, User
+from .types import DailySalt, Event, Property, User
 
 IN_MEMORY_DATABASE = "sqlite+aiosqlite://"
 connection_string = (
@@ -78,16 +79,45 @@ async def collect(event: Event):
         await session.commit()
 
 
-async def cleanup_old_data():
-    retention_period = timedelta(days=180)
-    cutoff_date = utc_now() - retention_period
+# 13 months: the CNIL ceiling for consent-exempt audience measurement is 25 months of
+# data, and 13 is the usual figure for the measurement itself.
+RETENTION = timedelta(days=395)
+
+
+async def cleanup_old_data() -> None:
+    cutoff_date = utc_now() - RETENTION
     async with session_scope() as session:
-        await execute_statement(
-            session,
-            "DELETE FROM analytics WHERE timestamp < :cutoff_date",
-            {"cutoff_date": cutoff_date},
-        )
+        result = await session.execute(
+            delete(Event).where(Event.timestamp < cutoff_date)
+        )  # type: ignore[arg-type]
         await session.commit()
+        logger.info(
+            f"retention: deleted {result.rowcount} event(s) older than {cutoff_date:%Y-%m-%d}"
+        )
+
+
+_SALT_CACHE: dict[str, str] = {}
+
+
+async def daily_salt() -> str:
+    """Today's salt, created on first use; every other day's salt is deleted."""
+    day = utc_now().strftime("%Y-%m-%d")
+    if day in _SALT_CACHE:
+        return _SALT_CACHE[day]
+    async with session_scope() as session:
+        row = (
+            (await session.execute(select(DailySalt).where(DailySalt.day == day)))
+            .scalars()
+            .first()
+        )
+        if row is None:
+            row = DailySalt(day=day, salt=secrets.token_hex(32))
+            session.add(row)
+        await session.execute(delete(DailySalt).where(DailySalt.day != day))  # type: ignore[arg-type]
+        await session.commit()
+        _SALT_CACHE.clear()
+        _SALT_CACHE[day] = row.salt
+        return row.salt
 
 
 async def _get_user_by_email(session: AsyncSession, user_email: str) -> Optional[User]:

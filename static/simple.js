@@ -13,6 +13,9 @@ const a7s = {
     }
 };
 
-a7s.trackEvent('page_view');
+// Global Privacy Control and Do Not Track are honoured as an objection to measurement.
+if (!(navigator.globalPrivacyControl || navigator.doNotTrack === '1')) {
+    a7s.trackEvent('page_view');
+}
 
 window.nillebAnalytics = a7s;

@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM python:3.12-slim as builder
 
 ARG PORT 17581
@@ -19,6 +20,26 @@ RUN apt-get clean && \
 COPY api/ ./api/
 COPY requirements.txt ./
 COPY static/ ./static/
+
+# Country lookup stays on the server: DB-IP's free country database (CC BY 4.0),
+# this month's edition or, early in the month, last month's.
+RUN mkdir -p /app/geo && python - <<'PY'
+import datetime, gzip, urllib.request
+today = datetime.date.today()
+last_month = (today.replace(day=1) - datetime.timedelta(days=1))
+for month in (today, last_month):
+    url = f"https://download.db-ip.com/free/dbip-country-lite-{month:%Y-%m}.mmdb.gz"
+    try:
+        data = urllib.request.urlopen(url, timeout=60).read()
+    except Exception as error:
+        print(f"{url}: {error}")
+        continue
+    open("/app/geo/dbip-country-lite.mmdb", "wb").write(gzip.decompress(data))
+    print(f"country database: {url}")
+    break
+else:
+    raise SystemExit("no DB-IP country database could be downloaded")
+PY
 
 USER appuser
 
