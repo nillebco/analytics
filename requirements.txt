@@ -2,7 +2,7 @@
 #    uv pip compile --python-version 3.12 requirements.in -o requirements.txt
 aiosqlite==0.22.1
     # via -r requirements.in
-annotated-doc==0.0.6
+annotated-doc==0.0.7
     # via fastapi
 annotated-types==0.8.0
     # via pydantic
@@ -14,13 +14,13 @@ anyio==4.16.0
     #   watchfiles
 asyncpg==0.32.0
     # via -r requirements.in
-certifi==2026.10.23
+certifi==2026.11.20
     # via
     #   httpcore
     #   httpx
 click==8.5.1
     # via uvicorn
-fastapi==0.163.1
+fastapi==0.165.0
     # via -r requirements.in
 greenlet==3.5.6
     # via -r requirements.in
@@ -46,11 +46,11 @@ maxminddb==3.3.0
     # via -r requirements.in
 opentelemetry-api==1.45.2
     # via fastapi
-pydantic==2.14.3
+pydantic==2.14.4
     # via
     #   fastapi
     #   sqlmodel
-pydantic-core==2.50.4
+pydantic-core==2.50.5
     # via pydantic
 pyjwt==2.15.1
     # via -r requirements.in
@@ -58,11 +58,11 @@ python-dotenv==1.2.4
     # via
     #   -r requirements.in
     #   uvicorn
-pyyaml==6.0.3
+pyyaml==6.0.4
     # via
     #   -r requirements.in
     #   uvicorn
-sqlalchemy==2.1.8
+sqlalchemy==2.1.9
     # via
     #   -r requirements.in
     #   sqlmodel
